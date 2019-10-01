@@ -1,0 +1,80 @@
+= JAX-RS Test Extension
+
+Very simple https://junit.org/junit5/[JUnit-5] extension to help testing JAX-RS infrastructure classes.
+
+There are two use-cases:
+
+== 1. Boundaries
+
+These are your classes that offer a REST service using JAX-RS server API; i.e.:
+
+[source,java]
+---------------------------------------------------------------
+@Path("/") public class MyBoundary {
+    @GET public String get() { return "foo"; }
+}
+---------------------------------------------------------------
+
+Could be tested like this:
+
+[source,java]
+---------------------------------------------------------------
+public class MyBoundaryTest {
+
+    @RegisterExtension static JaxRsClientTest jaxRs = new JaxRsClientTest(new MyBoundary());
+
+    @Test public void shouldGet() {
+        Response response = jaxRs.GET("/");
+
+        assertThat(response.getStatusInfo()).isEqualTo(OK);
+        assertThat(response.readEntity(String.class)).isEqualTo("foo");
+    }
+}
+---------------------------------------------------------------
+
+== 2. Gateways
+
+These are your classes that consume a REST service using the JAX-RS client API, and you don't want to integrate with the external service; i.e.:
+
+[source,java]
+---------------------------------------------------------------
+public class MyGateway {
+    Client client;
+    URI baseUri;
+
+    public String getFoo() {
+        Response response = client.target(baseUri).request(TEXT_PLAIN_TYPE).get();
+        assert 200 == response.getStatus();
+        return response.readEntity(String.class);
+    }
+}
+---------------------------------------------------------------
+
+Could be tested like this:
+
+[source,java]
+---------------------------------------------------------------
+public class MyGatewayTest {
+    @Path("/") public static class MockService {
+        @GET public String get() { return "foo"; }
+    }
+
+    @RegisterExtension static JaxRsTestExtension jaxRs = new JaxRsTestExtension(new MockService());
+
+    @Test void shouldGet() {
+        MyGateway gateway = new MyGateway();
+        gateway.client = jaxRs.client();
+        gateway.baseUri = jaxRs.baseUri();
+
+        String foo = gateway.getFoo();
+
+        assertThat(foo).isEqualTo("foo");
+    }
+}
+---------------------------------------------------------------
+
+== Implementation
+
+The extension uses Dropwizard internally, but it tries to hide it somewhat, i.e. the behavior is tweaked a little bit to be more like JSON-B (instead of Jackson) in that it serializes dates/times as ISO Strings, doesn't write 'absent' values (`null`, `Optional.empty()`, or `AtomicReference` to `null`), and ignores unknown fields. It should probably use something else instead to reduce all the dependencies that are picked up by dropwizard, or at least shade everything; but that's actually quite a lot of work :-/
+
+It works for me (most of the time)
