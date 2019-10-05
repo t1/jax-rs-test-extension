@@ -16,7 +16,7 @@
     </properties>
 
     <build>
-        <defaultGoal>verify</defaultGoal>
+        <defaultGoal>install</defaultGoal>
         <finalName>${project.artifactId}</finalName>
         <plugins>
             <plugin>
