@@ -28,9 +28,12 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
  * JUnit 5 Jupiter Extension to make it easy to test JAX-RS infrastructure code.
  */
 public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
-    private final DropwizardClient dropwizardClient;
+    private DropwizardClient dropwizardClient;
     private Client jaxRsClient;
     private boolean isStatic = false;
+
+    /** Strangely required by Jupiter for an automatically discovered extension */
+    @SuppressWarnings("unused") public JaxRsTestExtension() {}
 
     /**
      * Pass in all the resources required for the service.
@@ -41,30 +44,32 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
 
     @Override public void beforeAll(ExtensionContext context) {
         isStatic = true;
-        launch();
+        start();
     }
 
     @Override public void beforeEach(ExtensionContext context) {
         if (!isStatic)
-            launch();
+            start();
     }
 
     @Override public void afterEach(ExtensionContext context) {
         if (!isStatic)
-            dropwizardClient.after();
+            stop();
     }
 
     @Override public void afterAll(ExtensionContext context) {
         if (isStatic)
-            dropwizardClient.after();
-    }
-
-    private void launch() {
-        start();
-        configureJackson();
+            stop();
     }
 
     private void start() {
+        if (dropwizardClient != null) {
+            startDropwizard();
+            configureJackson();
+        }
+    }
+
+    private void startDropwizard() {
         try {
             dropwizardClient.before();
         } catch (Throwable e) {
@@ -83,6 +88,12 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
 
     private ObjectMapper getObjectMapper() {
         return dropwizardClient.getObjectMapper();
+    }
+
+    private void stop() {
+        if (dropwizardClient != null) {
+            dropwizardClient.after();
+        }
     }
 
     /**

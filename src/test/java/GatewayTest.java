@@ -1,4 +1,5 @@
 import com.github.t1.jaxrsclienttest.JaxRsTestExtension;
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -13,9 +14,10 @@ import static org.assertj.core.api.BDDAssertions.then;
 
 class GatewayTest {
 
+    @RequiredArgsConstructor
     public static class MyGateway {
-        Client client;
-        URI baseUri;
+        final Client client;
+        final URI baseUri;
 
         public String getFoo() {
             Response response = client.target(baseUri).request(TEXT_PLAIN_TYPE).get();
@@ -31,9 +33,7 @@ class GatewayTest {
     @RegisterExtension static JaxRsTestExtension jaxRs = new JaxRsTestExtension(new MockService());
 
     @Test void shouldGet() {
-        MyGateway gateway = new MyGateway();
-        gateway.client = jaxRs.client();
-        gateway.baseUri = jaxRs.baseUri();
+        MyGateway gateway = new MyGateway(jaxRs.client(), jaxRs.baseUri());
 
         String foo = gateway.getFoo();
 
