@@ -75,6 +75,4 @@ public class MyGatewayTest {
 
 == Implementation
 
-The extension uses Dropwizard internally, but it tries to hide it somewhat, i.e. the behavior is tweaked a little bit to be more like JSON-B (instead of Jackson) in that it serializes dates/times as ISO Strings, doesn't write 'absent' values (`null`, `Optional.empty()`, or `AtomicReference` to `null`), and ignores unknown fields. It should probably use something else instead to reduce all the dependencies that are picked up by dropwizard, or at least shade everything; but that's actually quite a lot of work :-/
-
-It works for me (most of the time)
+The extension uses RestEasy + Undertow internally, but you shouldn't notice that too often.

@@ -1,36 +1,41 @@
 package com.github.t1.jaxrsclienttest;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-import io.dropwizard.testing.common.DropwizardClient;
-import org.glassfish.jersey.client.ClientConfig;
+import io.undertow.Undertow;
+import io.undertow.Undertow.ListenerInfo;
+import io.undertow.servlet.api.DeploymentInfo;
+import lombok.SneakyThrows;
+import org.jboss.resteasy.plugins.server.undertow.UndertowJaxrsServer;
+import org.jboss.resteasy.spi.ResteasyDeployment;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Application;
 import javax.ws.rs.core.Response;
+import java.lang.reflect.Field;
+import java.net.InetSocketAddress;
 import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
 
-import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
-import static com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS;
-import static com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS;
+import static java.util.Arrays.asList;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 
 /**
  * JUnit 5 Jupiter Extension to make it easy to test JAX-RS infrastructure code.
  */
 public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
-    private DropwizardClient dropwizardClient;
+    private static UndertowJaxrsServer SERVER;
     private Client jaxRsClient;
     private boolean isStatic = false;
+    private static Set<Object> SINGLETONS = null;
+    private URI baseUri;
 
     /** Strangely required by Jupiter for an automatically discovered extension */
     @SuppressWarnings("unused") public JaxRsTestExtension() {}
@@ -39,7 +44,7 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
      * Pass in all the resources required for the service.
      */
     public JaxRsTestExtension(Object... resources) {
-        this.dropwizardClient = new DropwizardClient(resources);
+        SINGLETONS = new HashSet<>(asList(resources));
     }
 
     @Override public void beforeAll(ExtensionContext context) {
@@ -63,43 +68,53 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
     }
 
     private void start() {
-        if (dropwizardClient != null) {
-            startDropwizard();
-            configureJackson();
-        }
+        SERVER = new UndertowJaxrsServer().start(Undertow.builder().addHttpListener(0, "localhost"));
+        this.baseUri = getBaseUri();
+        deployDummyApp();
     }
 
-    private void startDropwizard() {
+    private URI getBaseUri() {
+        // Undertow assumes that the port is always fixed; so we'll have to do some reflection magic
+        Undertow undertow = getField(SERVER, "server", Undertow.class);
+        ListenerInfo listenerInfo = undertow.getListenerInfo().iterator().next(); // we only have one
+        InetSocketAddress socketAddress = (InetSocketAddress) listenerInfo.getAddress();
+        return URI.create(listenerInfo.getProtcol() + "://" + socketAddress.getHostString() + ":" + socketAddress.getPort());
+    }
+
+    @SuppressWarnings("SameParameterValue") @SneakyThrows(ReflectiveOperationException.class)
+    private static <T> T getField(Object instance, String fieldName, Class<T> type) {
+        Field field = instance.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        return type.cast(field.get(instance));
+    }
+
+    private void deployDummyApp() {
+        Class<?> firstResource = SINGLETONS.iterator().next().getClass();
         try {
-            dropwizardClient.before();
+            ResteasyDeployment deployment = new ResteasyDeployment();
+
+            deployment.setApplicationClass(DummyApp.class.getName());
+
+            DeploymentInfo deploymentInfo = SERVER.undertowDeployment(deployment);
+            deploymentInfo.setClassLoader(firstResource.getClassLoader());
+            deploymentInfo.setContextPath("");
+            deploymentInfo.setDeploymentName(firstResource.getSimpleName());
+            SERVER.deploy(deploymentInfo);
         } catch (Throwable e) {
-            throw new RuntimeException("can't boot dropwizard client", e);
+            throw new RuntimeException("can't deploy " + firstResource, e);
         }
-    }
-
-    private void configureJackson() {
-        getObjectMapper()
-            .disable(WRITE_DATES_AS_TIMESTAMPS)
-            .disable(FAIL_ON_UNKNOWN_PROPERTIES)
-            .setSerializationInclusion(JsonInclude.Include.NON_ABSENT)
-            .registerModule(new Jdk8Module())
-            .registerModule(new JavaTimeModule());
-    }
-
-    private ObjectMapper getObjectMapper() {
-        return dropwizardClient.getObjectMapper();
     }
 
     private void stop() {
-        if (dropwizardClient != null) {
-            dropwizardClient.after();
-        }
+        if (SERVER != null)
+            SERVER.stop();
+        SINGLETONS = null;
     }
 
     /**
      * The service runs on an arbitrary port... here you'll get that info.
      */
-    public URI baseUri() { return dropwizardClient.baseUri(); }
+    public URI baseUri() { return baseUri; }
 
     /**
      * Convenience method to do a GET on the given `path` with `Accept: application/json`.
@@ -118,12 +133,12 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
      */
     public Client client() {
         if (jaxRsClient == null)
-            jaxRsClient = buildJaxRsClient();
+            jaxRsClient = ClientBuilder.newClient();
         return jaxRsClient;
     }
 
-    private Client buildJaxRsClient() {
-        JacksonJaxbJsonProvider provider = new JacksonJaxbJsonProvider(getObjectMapper(), DEFAULT_ANNOTATIONS);
-        return ClientBuilder.newClient(new ClientConfig(provider));
+    @ApplicationPath("/")
+    public static class DummyApp extends Application {
+        @Override public Set<Object> getSingletons() { return SINGLETONS; }
     }
 }

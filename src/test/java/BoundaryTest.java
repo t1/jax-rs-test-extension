@@ -1,4 +1,7 @@
 import com.github.t1.jaxrsclienttest.JaxRsTestExtension;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -11,8 +14,15 @@ import static org.assertj.core.api.BDDAssertions.then;
 
 class BoundaryTest {
 
+    @Data @NoArgsConstructor @AllArgsConstructor
+    public static class Entity {
+
+        String first, second;
+    }
+
     @Path("/") public static class MockBoundary {
-        @GET public String get() { return "foo"; }
+
+        @GET public Entity get() { return ENTITY; }
     }
 
     @RegisterExtension static JaxRsTestExtension jaxRs = new JaxRsTestExtension(new MockBoundary());
@@ -21,6 +31,10 @@ class BoundaryTest {
         Response response = jaxRs.GET("/");
 
         then(response.getStatusInfo()).isEqualTo(OK);
-        then(response.readEntity(String.class)).isEqualTo("foo");
+        response.bufferEntity();
+        then(response.readEntity(String.class)).isEqualTo("{\"first\":\"A\",\"second\":\"B\"}");
+        then(response.readEntity(Entity.class)).isEqualTo(ENTITY);
     }
+
+    private static final Entity ENTITY = new Entity("A", "B");
 }

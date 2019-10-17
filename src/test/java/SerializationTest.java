@@ -26,7 +26,7 @@ public class SerializationTest {
 
     public static final Person PERSON = new Person();
 
-    public static final String JSON = "{\"firstName\":\"Joe\",\"phone\":\"123\",\"born\":\"2019-10-01\"}";
+    public static final String JSON = "{\"born\":\"2019-10-01\",\"firstName\":\"Joe\",\"phone\":\"123\"}";
 
     @Path("/") public static class PersonBoundary {
         @GET @Path("/serialize") public Person getSerialize() { return PERSON; }
