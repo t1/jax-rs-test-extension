@@ -1,12 +1,12 @@
 = JAX-RS Test Extension
 
-Very simple https://junit.org/junit5/[JUnit-5] extension to help testing JAX-RS infrastructure classes.
+Very simple (and fast) https://junit.org/junit5/[JUnit-5] extension to test JAX-RS infrastructure classes. Uses RestEasy + Undertow internally, but you shouldn't notice that too often; just stick to JAX-RS + JSON-B.
 
 There are two use-cases:
 
 == 1. Boundaries
 
-These are your classes that offer a REST service using JAX-RS server API; i.e.:
+These are your classes that provide a REST service using JAX-RS server API; i.e.:
 
 [source,java]
 ---------------------------------------------------------------
@@ -34,7 +34,7 @@ public class MyBoundaryTest {
 
 == 2. Gateways
 
-These are your classes that consume a REST service using the JAX-RS client API, and you don't want to integrate with the external service; i.e.:
+These are your classes that consume a REST service using the JAX-RS client API, and you don't want to integrate with the real external service; i.e.:
 
 [source,java]
 ---------------------------------------------------------------
@@ -73,6 +73,7 @@ public class MyGatewayTest {
 }
 ---------------------------------------------------------------
 
-== Implementation
+== Limitations
 
-The extension uses RestEasy + Undertow internally, but you shouldn't notice that too often.
+1. There is no dependency injection, etc. You'll have to pass in fully built JAX-RS service instances.
+2. This is _not_ for integration tests! E.g. it uses it's own `Application` class. These test qualify as a unit tests: they only test your Boundary or Gateway in isolation.
