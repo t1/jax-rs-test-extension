@@ -33,7 +33,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
     private static UndertowJaxrsServer SERVER;
     private Client jaxRsClient;
-    private boolean isStatic = false;
+    private int nesting = 0;
     private static Set<Object> SINGLETONS = null;
     private URI baseUri;
 
@@ -47,30 +47,22 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
         SINGLETONS = new HashSet<>(asList(resources));
     }
 
-    @Override public void beforeAll(ExtensionContext context) {
-        isStatic = true;
-        start();
-    }
+    @Override public void beforeAll(ExtensionContext context) { start(); }
 
-    @Override public void beforeEach(ExtensionContext context) {
-        if (!isStatic)
-            start();
-    }
+    @Override public void beforeEach(ExtensionContext context) { start(); }
 
-    @Override public void afterEach(ExtensionContext context) {
-        if (!isStatic)
-            stop();
-    }
+    @Override public void afterEach(ExtensionContext context) { stop(); }
 
-    @Override public void afterAll(ExtensionContext context) {
-        if (isStatic)
-            stop();
-    }
+    @Override public void afterAll(ExtensionContext context) { stop(); }
 
     private void start() {
-        SERVER = new UndertowJaxrsServer().start(Undertow.builder().addHttpListener(0, "localhost"));
-        this.baseUri = getBaseUri();
-        deployDummyApp();
+        nesting++;
+        if (nesting == 1) {
+            assert SERVER == null;
+            SERVER = new UndertowJaxrsServer().start(Undertow.builder().addHttpListener(0, "localhost"));
+            this.baseUri = getBaseUri();
+            deployDummyApp();
+        }
     }
 
     private URI getBaseUri() {
@@ -96,7 +88,7 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
             deployment.setApplicationClass(DummyApp.class.getName());
 
             DeploymentInfo deploymentInfo = SERVER.undertowDeployment(deployment);
-            deploymentInfo.setClassLoader(firstResource.getClassLoader());
+            deploymentInfo.setClassLoader((firstResource.getClassLoader() != null) ? firstResource.getClassLoader() : ClassLoader.getSystemClassLoader());
             deploymentInfo.setContextPath("");
             deploymentInfo.setDeploymentName(firstResource.getSimpleName());
             SERVER.deploy(deploymentInfo);
@@ -106,9 +98,13 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
     }
 
     private void stop() {
-        if (SERVER != null)
+        nesting--;
+        if (nesting == 0) {
+            assert SERVER != null;
             SERVER.stop();
-        SINGLETONS = null;
+            SERVER = null;
+            SINGLETONS = null;
+        }
     }
 
     /**
