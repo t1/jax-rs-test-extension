@@ -46,6 +46,13 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
      */
     public JaxRsTestExtension(Object... resources) {
         SINGLETONS = new HashSet<>(asList(resources));
+        SINGLETONS.forEach(this::checkSingleton);
+    }
+
+    private void checkSingleton(Object singleton) {
+        if (singleton instanceof Class)
+            throw new IllegalArgumentException("the singleton <" + singleton + "> passed into " + JaxRsTestExtension.class.getSimpleName() +
+                " is a class, not an instance");
     }
 
     @Override public void beforeAll(ExtensionContext context) { start(); }
