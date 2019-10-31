@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import javax.ws.rs.ApplicationPath;
@@ -30,7 +31,7 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
 /**
  * JUnit 5 Jupiter Extension to make it easy to test JAX-RS infrastructure code.
  */
-public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
+public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback, Extension {
     private static UndertowJaxrsServer SERVER;
     private Client jaxRsClient;
     private int nesting = 0;
