@@ -5,7 +5,6 @@ import io.undertow.Undertow.ListenerInfo;
 import io.undertow.servlet.api.DeploymentInfo;
 import lombok.SneakyThrows;
 import org.jboss.resteasy.plugins.server.undertow.UndertowJaxrsServer;
-import org.jboss.resteasy.spi.ResteasyDeployment;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -13,7 +12,6 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
@@ -33,10 +31,13 @@ import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
  */
 public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback, Extension {
     private static UndertowJaxrsServer SERVER;
-    private Client jaxRsClient;
-    private int nesting = 0;
     private static Set<Object> SINGLETONS = null;
+
+    private int port = 0;
+    private String contextPath = "/";
     private URI baseUri;
+    private int nesting = 0;
+    private Client jaxRsClient;
 
     /** Strangely required by Jupiter for an automatically discovered extension */
     @SuppressWarnings("unused") public JaxRsTestExtension() {}
@@ -55,6 +56,24 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
                 " is a class, not an instance");
     }
 
+    /**
+     * By default, the port is <code>0</code>, i.e. a random, free port, which is a good thing,
+     * as there won't be any port conflicts. But sometimes you need a fixed port.
+     */
+    public JaxRsTestExtension port(int port) {
+        this.port = port;
+        return this;
+    }
+
+    /**
+     * By default, the application path "/" is used, i.e. there is no prefix to all requests.
+     */
+    public JaxRsTestExtension contextPath(String contextPath) {
+        this.contextPath = contextPath;
+        return this;
+    }
+
+
     @Override public void beforeAll(ExtensionContext context) { start(); }
 
     @Override public void beforeEach(ExtensionContext context) { start(); }
@@ -63,11 +82,11 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
 
     @Override public void afterAll(ExtensionContext context) { stop(); }
 
-    private void start() {
+    public void start() {
         nesting++;
         if (nesting == 1) {
             assert SERVER == null;
-            SERVER = new UndertowJaxrsServer().start(Undertow.builder().addHttpListener(0, "localhost"));
+            SERVER = new UndertowJaxrsServer().start(Undertow.builder().addHttpListener(port, "localhost"));
             this.baseUri = getBaseUri();
             deployDummyApp();
         }
@@ -91,13 +110,9 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
     private void deployDummyApp() {
         Class<?> firstResource = SINGLETONS.iterator().next().getClass();
         try {
-            ResteasyDeployment deployment = new ResteasyDeployment();
-
-            deployment.setApplicationClass(DummyApp.class.getName());
-
-            DeploymentInfo deploymentInfo = SERVER.undertowDeployment(deployment);
+            DeploymentInfo deploymentInfo = SERVER.undertowDeployment(DummyApp.class);
             deploymentInfo.setClassLoader((firstResource.getClassLoader() != null) ? firstResource.getClassLoader() : ClassLoader.getSystemClassLoader());
-            deploymentInfo.setContextPath("");
+            deploymentInfo.setContextPath(contextPath);
             deploymentInfo.setDeploymentName(firstResource.getSimpleName());
             SERVER.deploy(deploymentInfo);
         } catch (Throwable e) {
@@ -105,7 +120,7 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
         }
     }
 
-    private void stop() {
+    public void stop() {
         nesting--;
         if (nesting == 0) {
             assert SERVER != null;
@@ -116,7 +131,7 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
     }
 
     /**
-     * The service runs on an arbitrary port... here you'll get that info.
+     * The service normally runs on an arbitrary port... here you'll get that info.
      */
     public URI baseUri() { return baseUri; }
 
@@ -141,7 +156,6 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
         return jaxRsClient;
     }
 
-    @ApplicationPath("/")
     public static class DummyApp extends Application {
         @Override public Set<Object> getSingletons() { return SINGLETONS; }
     }
