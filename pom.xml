@@ -17,6 +17,25 @@
         <resteasy.version>3.9.0.Final</resteasy.version>
     </properties>
 
+    <scm>
+        <developerConnection>scm:git:https://github.com/t1/jax-rs-test-extension</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <distributionManagement>
+        <repository>
+            <id>bintray-t1-javaee-helpers</id>
+            <name>t1-javaee-helpers-jax-rs-test-extension</name>
+            <url>https://api.bintray.com/maven/t1/javaee-helpers/jax-rs-test-extension/;publish=1</url>
+        </repository>
+    </distributionManagement>
+
     <build>
         <defaultGoal>install</defaultGoal>
         <finalName>${project.artifactId}</finalName>
