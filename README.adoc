@@ -1,6 +1,8 @@
-= JAX-RS Test Extension
+= JAX-RS Test Extension image:https://maven-badges.herokuapp.com/maven-central/com.github.t1/jax-rs-test-extension/badge.svg[link=https://search.maven.org/artifact/com.github.t1/jax-rs-test-extension]
 
-image::https://api.bintray.com/packages/t1/javaee-helpers/jax-rs-test-extension/images/download.svg[link="https://bintray.com/t1/javaee-helpers/jax-rs-test-extension/_latestVersion"]
+[IMPORTANT]
+http://com.github/t1/wunderbar[WunderBar] might be a better fit for your use-case.
+
 
 Very simple (and fast) https://junit.org/junit5/[JUnit-5] extension to test JAX-RS infrastructure classes. Uses RestEasy + Undertow internally, but you shouldn't notice that too often; just stick to JAX-RS + JSON-B.
 
