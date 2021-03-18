@@ -25,7 +25,9 @@ class BoundaryTest {
         @GET public Entity get() { return ENTITY; }
     }
 
-    @RegisterExtension static JaxRsTestExtension jaxRs = new JaxRsTestExtension(new MockBoundary());
+    @RegisterExtension static JaxRsTestExtension jaxRs = new JaxRsTestExtension(new MockBoundary())
+        .port(18080)
+        .contextPath("/foo");
 
     @Test void shouldGet() {
         Response response = jaxRs.GET("/");

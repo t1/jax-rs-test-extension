@@ -97,7 +97,7 @@ public class JaxRsTestExtension implements BeforeAllCallback, BeforeEachCallback
         Undertow undertow = getField(SERVER, "server", Undertow.class);
         ListenerInfo listenerInfo = undertow.getListenerInfo().iterator().next(); // we only have one
         InetSocketAddress socketAddress = (InetSocketAddress) listenerInfo.getAddress();
-        return URI.create(listenerInfo.getProtcol() + "://" + socketAddress.getHostString() + ":" + socketAddress.getPort());
+        return URI.create(listenerInfo.getProtcol() + "://" + socketAddress.getHostString() + ":" + socketAddress.getPort() + contextPath);
     }
 
     @SuppressWarnings("SameParameterValue") @SneakyThrows(ReflectiveOperationException.class)
