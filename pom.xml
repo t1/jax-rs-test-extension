@@ -4,7 +4,7 @@
 
     <groupId>com.github.t1</groupId>
     <artifactId>jax-rs-test-extension</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2-SNAPSHOT</version>
     <name>jax-rs-test-extension</name>
     <description>JUnit-5 extension to help testing JAX-RS infrastructure classes</description>
     <url>https://github.com/t1/jax-rs-test-extension</url>
@@ -33,7 +33,7 @@
 
     <scm>
         <developerConnection>scm:git:https://github.com/t1/jax-rs-test-extension.git</developerConnection>
-        <tag>v1.0.1</tag>
+        <tag>HEAD</tag>
         <url>https://github.com/t1/jax-rs-test-extension.git</url>
     </scm>
     <distributionManagement>
