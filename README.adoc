@@ -1,6 +1,7 @@
 = JAX-RS Test Extension image:https://maven-badges.herokuapp.com/maven-central/com.github.t1/jax-rs-test-extension/badge.svg[link=https://search.maven.org/artifact/com.github.t1/jax-rs-test-extension]
 
 [IMPORTANT]
+This project has been archived!!!
 http://com.github/t1/wunderbar[WunderBar] might be a better fit for your use-case.
 
 
